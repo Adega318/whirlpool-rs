@@ -8,6 +8,8 @@ pkgs.mkShell {
     rustc
     rustfmt
     rust-analyzer
+    openssl
+    pkg-config
   ];
   env = {
     RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
