@@ -16,9 +16,7 @@ async fn main() -> Result<()> {
 
     let consumer = tokio::spawn(async move {
         while let Some(update) = rx.recv().await {
-            println!("Exchange: {}", update.exchange);
-            println!("Symbol: {}", update.symbol);
-            println!("Market update: {update:?}");
+            println!("{update}")
         }
     });
 
