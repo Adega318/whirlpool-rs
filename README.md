@@ -1,9 +1,26 @@
-This project is a HFT (High Frequency Trading) software program aimed at crypto arbitrage.
+# Whirlpool
 
-# TODO
+**A real-time, multi-exchange cryptocurrency market data aggregator written in Rust.**
 
-- [ ] Exchange bid/ask feed
-  - Multy Exchange
-- [ ] Price feed analyzer
-  - Fees awearness for opportunity calculation
-- [ ] Log opportunities
+Whirlpool connects to cryptocurrency exchanges, normalizes live market data, and aggregates order books into a unified market view — all from an interactive terminal UI powered by [Ratatui](https://ratatui.rs/).
+
+## Roadmap
+
+- [ ] Establish the Ratatui application and terminal event loop.
+- [ ] Exchanges implementation.
+  - [ ] Kraken.
+  - [ ] Coinbase.
+  - [ ] Custom exchanges.
+- [ ] Normalize incoming market data.
+- [ ] Market aggregation engine.
+- [ ] Display best bid/ask and cross-exchange spreads.
+- [ ] Robust reconnection and order book recovery.
+- [ ] Historical event replay and performance benchmarks.
+
+## Disclaimer
+
+Whirlpool is a market data and software engineering project. Displayed spreads do not guarantee executable arbitrage opportunities or profitable trades. Exchange fees, liquidity, latency, and execution constraints must be considered.
+
+## License
+
+To be determined.
