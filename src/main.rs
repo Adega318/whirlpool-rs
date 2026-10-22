@@ -2,46 +2,40 @@ mod exchange;
 mod types;
 
 use anyhow::Result;
-
 use tokio::sync::mpsc;
 
-use crate::exchange::websocket::connect;
-use exchange::kraken::Kraken;
-
-use self::exchange::websocket::Exchange;
+use crate::exchange::kraken::Kraken;
+use crate::exchange::traits::Exchange;
+use crate::exchange::websocket::WsClient;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let (tx, mut rx) = mpsc::channel::<types::Update>(1000);
+    let (updates_tx, mut updates_rx) = mpsc::channel(32);
 
-    let consumer = tokio::spawn(async move {
-        while let Some(update) = rx.recv().await {
-            println!("{update}")
+    let client = WsClient::new(Kraken, 32);
+    let commands_tx = client.send_tx.clone();
+    let shutdown_tx = client.shutdown_tx.clone();
+
+    let ws = tokio::spawn(client.run(updates_tx));
+
+    Kraken
+        .subscribe(&commands_tx, vec!["BTC/USD".to_string()])
+        .await?;
+
+    let reader = tokio::spawn(async move {
+        while let Some(update) = updates_rx.recv().await {
+            println!("{update}");
         }
+        Ok::<_, anyhow::Error>(())
     });
 
-    let exchanges: Vec<Box<dyn Exchange>> = vec![Box::new(Kraken)];
-    let mut handles = Vec::new();
+    tokio::signal::ctrl_c().await?;
 
-    for exchange in exchanges {
-        let tx = tx.clone();
+    shutdown_tx.send(()).await?;
 
-        let handle = tokio::spawn(async move {
-            if let Err(err) = connect(exchange.as_ref(), tx).await {
-                eprintln!("Exchange error: {err:#}");
-            }
-        });
+    ws.await??;
 
-        handles.push(handle);
-    }
-
-    drop(tx);
-
-    for handle in handles {
-        handle.await?;
-    }
-
-    consumer.await?;
+    reader.await??;
 
     Ok(())
 }

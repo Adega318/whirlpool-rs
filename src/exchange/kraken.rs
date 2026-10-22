@@ -1,18 +1,17 @@
-use anyhow::Result;
-use async_trait::async_trait;
+use anyhow::{Context, Result};
+use chrono::DateTime;
 use serde::Deserialize;
-use serde_json::json;
+use serde_json::{Value, json};
 use tokio::sync::mpsc;
 
-use crate::{exchange::websocket::Exchange, types::Update};
+use crate::{exchange::traits::Exchange, types::Update};
+
+const BOOK_CHANNEL: &str = "book";
 
 #[derive(Debug, Deserialize)]
 pub struct KrakenBookMessage {
-    pub channel: Option<String>,
     #[serde(default)]
     pub data: Vec<KrakenBookData>,
-    #[serde(rename = "type")]
-    pub message_type: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -34,60 +33,86 @@ pub struct KrakenLevel {
 
 pub struct Kraken;
 
-#[async_trait]
+impl Kraken {
+    fn parse_book(book: KrakenBookData) -> Result<Option<Update>> {
+        let (Some(symbol), Some(timestamp)) = (book.symbol, book.timestamp) else {
+            return Ok(None);
+        };
+
+        let timestamp = DateTime::parse_from_rfc3339(&timestamp)
+            .context("Invalid Kraken book timestamp")?
+            .timestamp_millis();
+
+        let timestamp =
+            u64::try_from(timestamp).context("Kraken timestamp is before the Unix epoch")?;
+
+        Ok(Some(Update {
+            exchange: Self::NAME,
+            symbol,
+            timestamp,
+            bids: book
+                .bids
+                .into_iter()
+                .map(|level| (level.price, level.qty))
+                .collect(),
+            asks: book
+                .asks
+                .into_iter()
+                .map(|level| (level.price, level.qty))
+                .collect(),
+        }))
+    }
+}
+
 impl Exchange for Kraken {
-    fn name(&self) -> &'static str {
-        "kraken"
-    }
+    const NAME: &'static str = "kraken";
+    const URL: &'static str = "wss://ws.kraken.com/v2";
 
-    fn url(&self) -> &'static str {
-        "wss://ws.kraken.com/v2"
-    }
-
-    fn subscription(&self) -> String {
-        json!({
+    async fn subscribe(&self, tx: &mpsc::Sender<String>, symbols: Vec<String>) -> Result<()> {
+        let subscription = json!({
             "method": "subscribe",
             "params": {
-                "channel": "book",
-                "symbol": ["BTC/USD"],
+                "channel": BOOK_CHANNEL,
+                "symbol": symbols,
             }
         })
-        .to_string()
+        .to_string();
+
+        tx.send(subscription).await?;
+        Ok(())
     }
 
-    async fn handle_message(&self, text: &str, tx: &mpsc::Sender<Update>) -> Result<()> {
-        let message: KrakenBookMessage = serde_json::from_str(text)?;
+    async fn unsubscribe(&self, tx: &mpsc::Sender<String>, symbols: Vec<String>) -> Result<()> {
+        let unsubscription = json!({
+            "method": "unsubscribe",
+            "params": {
+                "channel": BOOK_CHANNEL,
+                "symbol": symbols
+            }
+        })
+        .to_string();
 
-        if message.channel.as_deref() != Some("book") {
-            return Ok(());
-        }
-
-        for book in message.data {
-            let (Some(symbol), Some(timestamp)) = (book.symbol, book.timestamp) else {
-                continue;
-            };
-
-            let time = chrono::DateTime::parse_from_rfc3339(&timestamp)?.timestamp_millis() as u64;
-
-            let update = Update {
-                exchange: self.name(),
-                symbol,
-                time,
-                bids: book
-                    .bids
-                    .into_iter()
-                    .map(|level| (level.price, level.qty))
-                    .collect(),
-                asks: book
-                    .asks
-                    .into_iter()
-                    .map(|level| (level.price, level.qty))
-                    .collect(),
-            };
-
-            tx.send(update).await?;
-        }
-
+        tx.send(unsubscription).await?;
         Ok(())
+    }
+
+    async fn handle_message(&self, message: &str) -> Result<Vec<Update>> {
+        // Ignore acknowledgements and unrelated channels before parsing
+        // the exchange-specific book structure.
+        let value: Value = serde_json::from_str(message)?;
+
+        if value.get("channel").and_then(Value::as_str) != Some(BOOK_CHANNEL) {
+            return Ok(Vec::new());
+        }
+
+        let message: KrakenBookMessage =
+            serde_json::from_value(value).context("Failed to deserialize Kraken book message")?;
+
+        message
+            .data
+            .into_iter()
+            .map(Self::parse_book)
+            .collect::<Result<Vec<_>>>()
+            .map(|updates| updates.into_iter().flatten().collect())
     }
 }
