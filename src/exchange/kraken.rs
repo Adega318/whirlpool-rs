@@ -20,6 +20,7 @@ pub struct KrakenBookData {
     pub asks: Vec<KrakenLevel>,
     #[serde(default)]
     pub bids: Vec<KrakenLevel>,
+    #[expect(dead_code, reason = "checksum validation not yet implemented")]
     pub checksum: Option<u64>,
     pub symbol: Option<String>,
     pub timestamp: Option<String>,
