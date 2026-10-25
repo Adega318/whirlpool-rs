@@ -2,16 +2,15 @@ mod app;
 mod exchange;
 mod types;
 
+use crate::app::App;
+use crate::exchange::kraken::Kraken;
+use crate::exchange::traits::Exchange;
+use crate::exchange::websocket::WsClient;
 use anyhow::Result;
 use clap::Parser;
 use tokio::sync::mpsc;
 use tracing::debug;
 use tracing_subscriber::EnvFilter;
-
-use crate::app::App;
-use crate::exchange::kraken::Kraken;
-use crate::exchange::traits::Exchange;
-use crate::exchange::websocket::WsClient;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -20,22 +19,26 @@ struct Args {
     no_tui: bool,
 }
 
+const CAPACITY: usize = 32;
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
     init_logging();
 
-    let (updates_tx, mut updates_rx) = mpsc::channel(32);
+    let (updates_tx, mut updates_rx) = mpsc::channel(CAPACITY);
+    let clients = vec![WsClient::new(Kraken, CAPACITY)];
+    let symbols = vec!["BTC/USD".to_string()];
 
-    let client = WsClient::new(Kraken, 32);
-    let commands_tx = client.send_tx.clone();
-    let shutdown_tx = client.shutdown_tx.clone();
+    let mut shutdown_txs = Vec::new();
+    let mut ws_handles = Vec::new();
 
-    let ws = tokio::spawn(client.run(updates_tx));
-
-    Kraken
-        .subscribe(&commands_tx, vec!["BTC/USD".to_string()])
-        .await?;
+    for client in clients {
+        shutdown_txs.push(client.shutdown_tx.clone());
+        client.exchange.subscribe(&client.send_tx, &symbols).await?;
+        ws_handles.push(tokio::spawn(client.run(updates_tx.clone())));
+    }
+    drop(updates_tx);
 
     let reader = tokio::spawn(async move {
         while let Some(update) = updates_rx.recv().await {
@@ -51,9 +54,13 @@ async fn main() -> Result<()> {
         tokio::signal::ctrl_c().await?;
     }
 
-    shutdown_tx.send(()).await?;
+    for tx in &shutdown_txs {
+        let _ = tx.send(()).await;
+    }
 
-    ws.await??;
+    for ws in ws_handles {
+        ws.await??;
+    }
 
     reader.await??;
 

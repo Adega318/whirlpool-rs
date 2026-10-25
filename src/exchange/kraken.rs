@@ -69,7 +69,7 @@ impl Exchange for Kraken {
     const NAME: &'static str = "kraken";
     const URL: &'static str = "wss://ws.kraken.com/v2";
 
-    async fn subscribe(&self, tx: &mpsc::Sender<String>, symbols: Vec<String>) -> Result<()> {
+    async fn subscribe(&self, tx: &mpsc::Sender<String>, symbols: &Vec<String>) -> Result<()> {
         let subscription = json!({
             "method": "subscribe",
             "params": {
@@ -83,7 +83,7 @@ impl Exchange for Kraken {
         Ok(())
     }
 
-    async fn unsubscribe(&self, tx: &mpsc::Sender<String>, symbols: Vec<String>) -> Result<()> {
+    async fn unsubscribe(&self, tx: &mpsc::Sender<String>, symbols: &Vec<String>) -> Result<()> {
         let unsubscription = json!({
             "method": "unsubscribe",
             "params": {

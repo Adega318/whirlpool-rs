@@ -12,7 +12,7 @@ pub struct WsClient<E: Exchange> {
     send_rx: mpsc::Receiver<String>,
     pub shutdown_tx: mpsc::Sender<()>,
     shutdown_rx: mpsc::Receiver<()>,
-    exchange: E,
+    pub exchange: E,
 }
 
 impl<E: Exchange> WsClient<E> {
