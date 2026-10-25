@@ -30,14 +30,19 @@ pub fn render(app: &mut App, frame: &mut Frame, agg: &Aggregator) {
         top,
     );
 
-    let rows = agg.exchange_best.iter().map(|s| {
-        Row::new(vec![
-            s.exchange.to_string(),
-            if s.connected { "up" } else { "down" }.to_string(),
-            fmt(s.best_bid),
-            fmt(s.best_ask),
-        ])
-    });
+    let rows: Vec<Row> = agg
+        .exchange_best
+        .iter()
+        .map(|s| {
+            Row::new(vec![
+                s.exchange.to_string(),
+                if s.connected { "up" } else { "down" }.to_string(),
+                fmt(s.best_bid),
+                fmt(s.best_ask),
+            ])
+        })
+        .collect();
+
     let table = Table::new(
         rows,
         [

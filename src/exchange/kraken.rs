@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use async_trait::async_trait;
 use chrono::DateTime;
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -35,7 +36,15 @@ pub struct KrakenLevel {
 pub struct Kraken;
 
 impl Kraken {
-    fn parse_book(book: KrakenBookData) -> Result<Option<Update>> {
+    fn name(&self) -> &'static str {
+        "kraken"
+    }
+
+    fn url(&self) -> &'static str {
+        "wss://ws.kraken.com/v2"
+    }
+
+    fn parse_book(&self, book: KrakenBookData) -> Result<Option<Update>> {
         let (Some(symbol), Some(timestamp)) = (book.symbol, book.timestamp) else {
             return Ok(None);
         };
@@ -48,7 +57,7 @@ impl Kraken {
             u64::try_from(timestamp).context("Kraken timestamp is before the Unix epoch")?;
 
         Ok(Some(Update {
-            exchange: Self::NAME,
+            exchange: self.name(),
             exchanges_status: true,
             symbol,
             timestamp,
@@ -66,9 +75,15 @@ impl Kraken {
     }
 }
 
+#[async_trait]
 impl Exchange for Kraken {
-    const NAME: &'static str = "kraken";
-    const URL: &'static str = "wss://ws.kraken.com/v2";
+    fn name(&self) -> &'static str {
+        self.name()
+    }
+
+    fn url(&self) -> &'static str {
+        self.url()
+    }
 
     async fn subscribe(&self, tx: &mpsc::Sender<String>, symbols: &[String]) -> Result<()> {
         let subscription = json!({
@@ -113,7 +128,7 @@ impl Exchange for Kraken {
         message
             .data
             .into_iter()
-            .map(Self::parse_book)
+            .map(|book| self.parse_book(book))
             .collect::<Result<Vec<_>>>()
             .map(|updates| updates.into_iter().flatten().collect())
     }

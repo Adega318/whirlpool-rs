@@ -5,7 +5,6 @@ mod types;
 
 use crate::app::App;
 use crate::exchange::kraken::Kraken;
-use crate::exchange::traits::Exchange;
 use crate::exchange::websocket::WsClient;
 use anyhow::Result;
 use clap::Parser;
@@ -16,6 +15,7 @@ use tracing_subscriber::{
 };
 
 use self::agregator::Aggregator;
+use self::exchange::binance::Binance;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -34,8 +34,11 @@ async fn main() -> Result<()> {
     init_logging();
 
     let (updates_tx, updates_rx) = mpsc::channel(CAPACITY);
-    let clients = vec![WsClient::new(Kraken, CAPACITY)];
-    let symbols = vec!["BTC/USD".to_string()];
+    let clients = vec![
+        WsClient::new(Box::new(Kraken), CAPACITY),
+        WsClient::new(Box::new(Binance::default()), CAPACITY),
+    ];
+    let symbols = vec!["BTC/USDT".to_string(), "ETH/USDT".to_string()];
 
     let mut shutdown_txs = Vec::new();
     let mut ws_handles = Vec::new();

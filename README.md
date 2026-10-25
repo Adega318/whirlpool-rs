@@ -9,6 +9,7 @@ Whirlpool connects to cryptocurrency exchanges, normalizes live market data, and
 - [x] Establish the Ratatui application and terminal event loop.
 - [x] Exchange implementations.
   - [x] Kraken.
+  - [x] Binance
   - [ ] Coinbase.
   - [ ] Custom exchanges.
 - [x] Normalize incoming market data.

@@ -1,11 +1,13 @@
 use anyhow::Result;
+use async_trait::async_trait;
 use tokio::sync::mpsc;
 
 use crate::types::Update;
 
-pub trait Exchange {
-    const NAME: &'static str;
-    const URL: &'static str;
+#[async_trait]
+pub trait Exchange: Send + Sync {
+    fn name(&self) -> &'static str;
+    fn url(&self) -> &'static str;
 
     async fn handle_message(&self, message: &str) -> Result<Vec<Update>>;
 

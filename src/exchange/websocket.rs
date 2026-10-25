@@ -7,16 +7,16 @@ use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message;
 use tracing::info;
 
-pub struct WsClient<E: Exchange> {
+pub struct WsClient {
     pub send_tx: mpsc::Sender<String>,
     send_rx: mpsc::Receiver<String>,
     pub shutdown_tx: mpsc::Sender<()>,
     shutdown_rx: mpsc::Receiver<()>,
-    pub exchange: E,
+    pub exchange: Box<dyn Exchange>,
 }
 
-impl<E: Exchange> WsClient<E> {
-    pub fn new(exchange: E, capacity: usize) -> Self {
+impl WsClient {
+    pub fn new(exchange: Box<dyn Exchange>, capacity: usize) -> Self {
         let (send_tx, send_rx) = mpsc::channel(capacity);
         let (shutdown_tx, shutdown_rx) = mpsc::channel(1);
 
@@ -30,11 +30,11 @@ impl<E: Exchange> WsClient<E> {
     }
 
     pub async fn run(mut self, updates_tx: mpsc::Sender<Update>) -> Result<()> {
-        let (ws, _) = connect_async(E::URL)
+        let (ws, _) = connect_async(self.exchange.url())
             .await
-            .with_context(|| format!("Failed to connect to {}", E::NAME))?;
+            .with_context(|| format!("Failed to connect to {}", self.exchange.name()))?;
 
-        info!("{} connected", E::NAME);
+        info!("{} connected", self.exchange.name());
 
         let (mut writer, mut reader) = ws.split();
 
@@ -78,7 +78,7 @@ impl<E: Exchange> WsClient<E> {
                         }
 
                         Some(Ok(Message::Close(frame))) => {
-                            info!("{} disconnected: {:?}", E::NAME, frame);
+                            info!("{} disconnected: {:?}", self.exchange.name(), frame);
                             break;
                         }
 
@@ -95,7 +95,7 @@ impl<E: Exchange> WsClient<E> {
         }
 
         let _ = writer.close().await;
-        info!("{} stopped", E::NAME);
+        info!("{} stopped", self.exchange.name());
 
         Ok(())
     }
