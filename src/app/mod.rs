@@ -6,19 +6,27 @@ mod update;
 use anyhow::Result;
 use event::{Event, EventHandler};
 use ratatui::{Terminal, backend::CrosstermBackend};
+use tokio::sync::watch;
 use tui::Tui;
 use update::update;
 
-#[derive(Debug, Default)]
+use crate::agregator::Aggregator;
+
+#[derive(Debug)]
 pub struct App {
     should_quit: bool,
+    aggregator_rx: watch::Receiver<Aggregator>,
 }
 
 impl App {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(rx: watch::Receiver<Aggregator>) -> Self {
+        Self {
+            should_quit: false,
+            aggregator_rx: rx,
+        }
     }
 
+    #[expect(dead_code, reason = "yet to use")]
     pub fn tick(&self) {}
 
     pub fn quit(&mut self) {
@@ -33,7 +41,10 @@ impl App {
         tui.enter()?;
 
         while !self.should_quit {
-            tui.draw(&mut *self)?;
+            // Fresh snapshot every iteration; the lock is released right after the clone.
+            let snapshot = self.aggregator_rx.borrow_and_update().clone();
+            tui.draw(&mut *self, &snapshot)?;
+
             match tui.events.next()? {
                 Event::Tick => {}
                 Event::Key(key_event) => update(&mut *self, key_event),

@@ -5,7 +5,7 @@ use futures_util::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message;
-use tracing::{debug, info};
+use tracing::info;
 
 pub struct WsClient<E: Exchange> {
     pub send_tx: mpsc::Sender<String>,

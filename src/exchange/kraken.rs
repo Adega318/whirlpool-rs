@@ -49,6 +49,7 @@ impl Kraken {
 
         Ok(Some(Update {
             exchange: Self::NAME,
+            exchanges_status: true,
             symbol,
             timestamp,
             bids: book

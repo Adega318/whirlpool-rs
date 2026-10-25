@@ -1,3 +1,4 @@
+mod agregator;
 mod app;
 mod exchange;
 mod types;
@@ -9,11 +10,12 @@ use crate::exchange::websocket::WsClient;
 use anyhow::Result;
 use clap::Parser;
 use std::sync::atomic::{AtomicBool, Ordering};
-use tokio::sync::mpsc;
-use tracing::debug;
+use tokio::sync::{mpsc, watch};
 use tracing_subscriber::{
     EnvFilter, Layer, filter::FilterFn, layer::SubscriberExt, util::SubscriberInitExt,
 };
+
+use self::agregator::Aggregator;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -31,7 +33,7 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     init_logging();
 
-    let (updates_tx, mut updates_rx) = mpsc::channel(CAPACITY);
+    let (updates_tx, updates_rx) = mpsc::channel(CAPACITY);
     let clients = vec![WsClient::new(Kraken, CAPACITY)];
     let symbols = vec!["BTC/USD".to_string()];
 
@@ -45,15 +47,11 @@ async fn main() -> Result<()> {
     }
     drop(updates_tx);
 
-    let reader = tokio::spawn(async move {
-        while let Some(update) = updates_rx.recv().await {
-            debug!("{update}");
-        }
-        Ok::<_, anyhow::Error>(())
-    });
+    let (state_tx, state_rx) = watch::channel(Aggregator::default());
+    tokio::spawn(Aggregator::run(state_tx, updates_rx));
 
     if !args.no_tui {
-        let mut app = App::new();
+        let mut app = App::new(state_rx);
         tokio::task::spawn_blocking(move || app.run()).await??;
     } else {
         tokio::signal::ctrl_c().await?;
@@ -66,8 +64,6 @@ async fn main() -> Result<()> {
     for ws in ws_handles {
         ws.await??;
     }
-
-    reader.await??;
 
     Ok(())
 }

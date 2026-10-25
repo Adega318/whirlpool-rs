@@ -3,6 +3,7 @@ use std::fmt;
 #[derive(Debug)]
 pub struct Update {
     pub exchange: &'static str,
+    pub exchanges_status: bool,
     pub symbol: String,
     pub timestamp: u64,
     pub bids: Vec<(f64, f64)>,

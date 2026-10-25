@@ -12,8 +12,8 @@ Whirlpool connects to cryptocurrency exchanges, normalizes live market data, and
   - [ ] Coinbase.
   - [ ] Custom exchanges.
 - [x] Normalize incoming market data.
-- [ ] Market aggregation engine.
-- [ ] Display best bid/ask and cross-exchange spreads.
+- [x] Market aggregation engine.
+- [x] Display best bid/ask and cross-exchange spreads.
 - [ ] Robust reconnection and order book recovery.
 - [ ] Historical event replay and performance benchmarks.
 
