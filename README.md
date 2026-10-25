@@ -6,12 +6,12 @@ Whirlpool connects to cryptocurrency exchanges, normalizes live market data, and
 
 ## Roadmap
 
-- [ ] Establish the Ratatui application and terminal event loop.
-- [ ] Exchange implementations.
-  - [ ] Kraken.
+- [x] Establish the Ratatui application and terminal event loop.
+- [x] Exchange implementations.
+  - [x] Kraken.
   - [ ] Coinbase.
   - [ ] Custom exchanges.
-- [ ] Normalize incoming market data.
+- [x] Normalize incoming market data.
 - [ ] Market aggregation engine.
 - [ ] Display best bid/ask and cross-exchange spreads.
 - [ ] Robust reconnection and order book recovery.
