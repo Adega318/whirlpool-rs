@@ -10,16 +10,16 @@ use tokio::sync::watch;
 use tui::Tui;
 use update::update;
 
-use crate::agregator::Aggregator;
+use crate::agregate::Aggregate;
 
 #[derive(Debug)]
 pub struct App {
     should_quit: bool,
-    aggregator_rx: watch::Receiver<Aggregator>,
+    aggregator_rx: watch::Receiver<Aggregate>,
 }
 
 impl App {
-    pub fn new(rx: watch::Receiver<Aggregator>) -> Self {
+    pub fn new(rx: watch::Receiver<Aggregate>) -> Self {
         Self {
             should_quit: false,
             aggregator_rx: rx,

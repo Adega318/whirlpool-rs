@@ -10,7 +10,7 @@ use ratatui::crossterm::{
 pub type CrosstermTerminal = ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stderr>>;
 
 use crate::{
-    agregator::Aggregator,
+    agregate::Aggregate,
     app::{App, event::EventHandler, ui},
     set_logging_enabled,
 };
@@ -42,7 +42,7 @@ impl Tui {
         Ok(())
     }
 
-    pub fn draw(&mut self, app: &mut App, agg: &Aggregator) -> Result<()> {
+    pub fn draw(&mut self, app: &mut App, agg: &Aggregate) -> Result<()> {
         self.terminal.draw(|frame| ui::render(app, frame, agg))?;
         Ok(())
     }

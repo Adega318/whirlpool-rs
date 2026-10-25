@@ -1,11 +1,14 @@
+use std::{collections::HashMap, sync::RwLock};
+
 use anyhow::{Context, Result};
-use async_trait::async_trait;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
 use crate::{exchange::traits::Exchange, types::Update};
+
+use async_trait::async_trait;
 
 const DEPTH_EVENT: &str = "depthUpdate";
 
@@ -33,12 +36,14 @@ pub struct BinanceDepthEvent {
 
 pub struct Binance {
     id: String,
+    symbols: RwLock<HashMap<String, String>>,
 }
 
 impl Default for Binance {
     fn default() -> Self {
         Self {
             id: Uuid::new_v4().simple().to_string(),
+            symbols: RwLock::new(HashMap::new()),
         }
     }
 }
@@ -50,6 +55,11 @@ impl Binance {
 
     fn url(&self) -> &'static str {
         "wss://stream.binance.com:9443/ws"
+    }
+
+    /// "BTC/USDT" -> "BTCUSDT" (the form Binance echoes back in events)
+    fn normalize(symbol: &str) -> String {
+        symbol.replace('/', "").to_uppercase()
     }
 
     fn parse_levels(levels: Vec<[String; 2]>) -> Result<Vec<(f64, f64)>> {
@@ -67,8 +77,18 @@ impl Binance {
     fn stream_names(symbols: &[String]) -> Vec<String> {
         symbols
             .iter()
-            .map(|s| format!("{}@depth@100ms", s.replace("/", "").to_lowercase()))
+            .map(|s| format!("{}@depth@100ms", Self::normalize(s).to_lowercase()))
             .collect()
+    }
+
+    /// Resolve a Binance symbol back to the caller's original symbol,
+    /// falling back to Binance's own form if it was never registered.
+    fn original_symbol(&self, binance_symbol: String) -> String {
+        self.symbols
+            .read()
+            .ok()
+            .and_then(|map| map.get(&binance_symbol).cloned())
+            .unwrap_or(binance_symbol)
     }
 }
 
@@ -83,6 +103,17 @@ impl Exchange for Binance {
     }
 
     async fn subscribe(&self, tx: &mpsc::Sender<String>, symbols: &[String]) -> Result<()> {
+        // Register the mapping before sending, so no event can arrive unmapped.
+        {
+            let mut map = self
+                .symbols
+                .write()
+                .map_err(|_| anyhow::anyhow!("symbol map lock poisoned"))?;
+            for s in symbols {
+                map.insert(Self::normalize(s), s.clone());
+            }
+        }
+
         let msg = json!({
             "method": "SUBSCRIBE",
             "params": Self::stream_names(symbols),
@@ -103,6 +134,17 @@ impl Exchange for Binance {
         .to_string();
 
         tx.send(msg).await?;
+
+        {
+            let mut map = self
+                .symbols
+                .write()
+                .map_err(|_| anyhow::anyhow!("symbol map lock poisoned"))?;
+            for s in symbols {
+                map.remove(&Self::normalize(s));
+            }
+        }
+
         Ok(())
     }
 
@@ -120,7 +162,7 @@ impl Exchange for Binance {
         Ok(vec![Update {
             exchange: self.name(),
             exchanges_status: true,
-            symbol: event.symbol,
+            symbol: self.original_symbol(event.symbol),
             timestamp: event.event_time,
             bids: Self::parse_levels(event.bids)?,
             asks: Self::parse_levels(event.asks)?,

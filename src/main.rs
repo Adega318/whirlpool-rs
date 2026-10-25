@@ -1,4 +1,4 @@
-mod agregator;
+mod agregate;
 mod app;
 mod exchange;
 mod types;
@@ -14,7 +14,7 @@ use tracing_subscriber::{
     EnvFilter, Layer, filter::FilterFn, layer::SubscriberExt, util::SubscriberInitExt,
 };
 
-use self::agregator::Aggregator;
+use self::agregate::Aggregate;
 use self::exchange::binance::Binance;
 
 #[derive(Parser, Debug)]
@@ -50,8 +50,8 @@ async fn main() -> Result<()> {
     }
     drop(updates_tx);
 
-    let (state_tx, state_rx) = watch::channel(Aggregator::default());
-    tokio::spawn(Aggregator::run(state_tx, updates_rx));
+    let (state_tx, state_rx) = watch::channel(Aggregate::default());
+    tokio::spawn(Aggregate::run(state_tx, updates_rx));
 
     if !args.no_tui {
         let mut app = App::new(state_rx);
