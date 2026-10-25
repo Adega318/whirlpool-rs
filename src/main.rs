@@ -8,9 +8,12 @@ use crate::exchange::traits::Exchange;
 use crate::exchange::websocket::WsClient;
 use anyhow::Result;
 use clap::Parser;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::mpsc;
 use tracing::debug;
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::{
+    EnvFilter, Layer, filter::FilterFn, layer::SubscriberExt, util::SubscriberInitExt,
+};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -20,6 +23,8 @@ struct Args {
 }
 
 const CAPACITY: usize = 32;
+
+static LOGGING_ENABLED: AtomicBool = AtomicBool::new(true);
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -68,9 +73,19 @@ async fn main() -> Result<()> {
 }
 
 fn init_logging() {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
-        )
-        .init();
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let filter = FilterFn::new(move |_meta| {
+        if !LOGGING_ENABLED.load(Ordering::Relaxed) {
+            return false;
+        }
+        true
+    });
+    let fmt_layer = tracing_subscriber::fmt::layer()
+        .with_filter(filter)
+        .with_filter(env_filter);
+    tracing_subscriber::registry().with(fmt_layer).init();
+}
+
+fn set_logging_enabled(enabled: bool) {
+    LOGGING_ENABLED.store(enabled, Ordering::Relaxed);
 }

@@ -9,6 +9,6 @@ pub trait Exchange {
 
     async fn handle_message(&self, message: &str) -> Result<Vec<Update>>;
 
-    async fn subscribe(&self, tx: &mpsc::Sender<String>, symbols: &Vec<String>) -> Result<()>;
-    async fn unsubscribe(&self, tx: &mpsc::Sender<String>, symbols: &Vec<String>) -> Result<()>;
+    async fn subscribe(&self, tx: &mpsc::Sender<String>, symbols: &[String]) -> Result<()>;
+    async fn unsubscribe(&self, tx: &mpsc::Sender<String>, symbols: &[String]) -> Result<()>;
 }

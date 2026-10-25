@@ -5,7 +5,7 @@ use futures_util::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message;
-use tracing::debug;
+use tracing::{debug, info};
 
 pub struct WsClient<E: Exchange> {
     pub send_tx: mpsc::Sender<String>,
@@ -34,7 +34,7 @@ impl<E: Exchange> WsClient<E> {
             .await
             .with_context(|| format!("Failed to connect to {}", E::NAME))?;
 
-        debug!("{} connected", E::NAME);
+        info!("{} connected", E::NAME);
 
         let (mut writer, mut reader) = ws.split();
 
@@ -78,7 +78,7 @@ impl<E: Exchange> WsClient<E> {
                         }
 
                         Some(Ok(Message::Close(frame))) => {
-                            debug!("{} disconnected: {:?}", E::NAME, frame);
+                            info!("{} disconnected: {:?}", E::NAME, frame);
                             break;
                         }
 
@@ -95,7 +95,7 @@ impl<E: Exchange> WsClient<E> {
         }
 
         let _ = writer.close().await;
-        debug!("{} stopped", E::NAME);
+        info!("{} stopped", E::NAME);
 
         Ok(())
     }

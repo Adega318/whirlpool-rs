@@ -9,7 +9,7 @@ use ratatui::crossterm::{
 
 pub type CrosstermTerminal = ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stderr>>;
 
-use crate::{app::App, app::event::EventHandler, app::ui};
+use crate::{app::App, app::event::EventHandler, app::ui, set_logging_enabled};
 
 pub struct Tui {
     terminal: CrosstermTerminal,
@@ -31,6 +31,8 @@ impl Tui {
             panic_hook(panic);
         }));
 
+        set_logging_enabled(false);
+
         self.terminal.hide_cursor()?;
         self.terminal.clear()?;
         Ok(())
@@ -50,6 +52,7 @@ impl Tui {
     pub fn exit(&mut self) -> Result<()> {
         Self::reset()?;
         self.terminal.show_cursor()?;
+        set_logging_enabled(true);
         Ok(())
     }
 }
