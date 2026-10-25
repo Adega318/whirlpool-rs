@@ -2,6 +2,7 @@ mod agregate;
 mod app;
 mod exchange;
 mod types;
+mod utils;
 
 use crate::app::App;
 use crate::exchange::kraken::Kraken;
@@ -38,7 +39,7 @@ async fn main() -> Result<()> {
         WsClient::new(Box::new(Kraken), CAPACITY),
         WsClient::new(Box::new(Binance::default()), CAPACITY),
     ];
-    let symbols = vec!["BTC/USDT".to_string(), "ETH/USDT".to_string()];
+    let symbols = vec!["ETH/BTC".to_string(), "ADA/ETH".to_string()];
 
     let mut shutdown_txs = Vec::new();
     let mut ws_handles = Vec::new();

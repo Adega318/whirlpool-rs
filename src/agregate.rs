@@ -4,6 +4,7 @@ use std::fmt::{self, Display};
 use tokio::sync::{mpsc::Receiver, watch};
 
 use crate::types::Update;
+use crate::utils::fmt_num;
 
 const DEPTH: usize = 10;
 type Symbol = String;
@@ -19,7 +20,7 @@ pub struct PriceLevel {
 }
 impl Display for PriceLevel {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:.2} @ {:.4}", self.price, self.qty)
+        write!(f, "{} @ {}", fmt_num(self.price), fmt_num(self.qty))
     }
 }
 
@@ -59,8 +60,11 @@ impl Display for Stats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{}, spread: {:.2}, best_bid: {}, best_ask: {}",
-            self.symbol, self.spread, self.best_bid, self.best_ask
+            "{}, spread: {}, best_bid: {}, best_ask: {}",
+            self.symbol,
+            fmt_num(self.spread),
+            self.best_bid,
+            self.best_ask
         )
     }
 }

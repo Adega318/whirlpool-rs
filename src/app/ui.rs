@@ -6,7 +6,10 @@ use ratatui::{
     widgets::{Block, Paragraph, Row, Table},
 };
 
-use crate::agregate::{Aggregate, ExchangeData, Stats};
+use crate::{
+    agregate::{Aggregate, ExchangeData, Stats},
+    utils::fmt_num,
+};
 
 use super::App;
 
@@ -38,11 +41,12 @@ fn best_table(stats: &[Stats], title: &str) -> Table<'static> {
         } else {
             Color::Yellow
         };
+
         Row::new([
             s.symbol.clone().bold(),
             s.best_bid.to_string().green(),
             s.best_ask.to_string().red(),
-            format!("{:.2}", s.spread).fg(spread_color),
+            fmt_num(s.spread).fg(spread_color),
         ])
     });
     Table::new(

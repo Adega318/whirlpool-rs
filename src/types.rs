@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::utils::fmt_num;
+
 #[derive(Debug)]
 pub struct Update {
     pub exchange: &'static str,
@@ -18,12 +20,12 @@ impl fmt::Display for Update {
 
         writeln!(f, "Bids:")?;
         for (price, qty) in &self.bids {
-            writeln!(f, "  Price: {price:.2}, Qty: {qty:.6}")?;
+            writeln!(f, "  Price: {}, Qty: {}", fmt_num(*price), fmt_num(*qty))?;
         }
 
         writeln!(f, "Asks:")?;
         for (price, qty) in &self.asks {
-            writeln!(f, "  Price: {price:.2}, Qty: {qty:.6}")?;
+            writeln!(f, "  Price: {}, Qty: {}", fmt_num(*price), fmt_num(*qty))?;
         }
 
         Ok(())

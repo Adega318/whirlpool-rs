@@ -5,7 +5,7 @@ use futures_util::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message;
-use tracing::info;
+use tracing::{debug, info};
 
 pub struct WsClient {
     pub send_tx: mpsc::Sender<String>,
@@ -67,6 +67,7 @@ impl WsClient {
                                 .await?;
 
                             for update in updates {
+                                debug!("{}",update);
                                 updates_tx.send(update).await.context("Update consumer channel closed")?;
                             }
                         }
