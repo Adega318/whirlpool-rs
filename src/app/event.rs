@@ -12,7 +12,9 @@ use ratatui::crossterm::event::{self, Event as CrosstermEvent, KeyEvent, MouseEv
 pub enum Event {
     Tick,
     Key(KeyEvent),
+    #[expect(dead_code)]
     Mouse(MouseEvent),
+    #[expect(dead_code)]
     Resize(u16, u16),
 }
 
